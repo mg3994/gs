@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antinna GPay Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://pay.google.com/gp/p/js/pay.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .glass-card { background: white; border: 1px solid #e2e8f0; border-radius: 24px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .gpay-btn-container { min-width: 240px; height: 40px; }
+        .terminal-bg { background: #0f172a; color: #38bdf8; border-radius: 24px; }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+                <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">Antinna <span class="text-indigo-600">Pay</span></h1>
+                <p class="text-slate-500 font-medium">Business UPI & Google Pay Integration</p>
+            </div>
+            <div class="flex items-center gap-4 bg-white p-3 px-5 rounded-2xl border border-slate-200 shadow-sm">
+                <input id="scriptUrl" type="text" class="text-xs text-indigo-600 font-mono bg-transparent outline-none w-64" 
+                value="https://script.google.com/macros/s/AKfycbxOlKZe42UZyt20fBee1QCp1nw1IDPnH8h34t1CQIuyihXJIUVz065d30Lyd3l0w8xUwg/exec">
+                <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+            <div class="lg:col-span-2 space-y-8">
+                
+                <!-- Login/Auth -->
+                <section class="glass-card p-8">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="p-3 bg-indigo-100 text-indigo-600 rounded-2xl">👤</div>
+                        <h2 class="text-xl font-bold">Authentication</h2>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input id="auth_user" type="text" class="p-4 rounded-xl border border-slate-200" placeholder="Email">
+                        <input id="auth_pass" type="password" class="p-4 rounded-xl border border-slate-200" placeholder="Password">
+                    </div>
+                    <div class="flex gap-4 mt-6">
+                        <button onclick="apiCall('signup')" class="flex-1 py-4 font-bold border-2 border-slate-200 rounded-xl hover:bg-slate-50">Signup</button>
+                        <button onclick="apiCall('login')" class="flex-1 py-4 font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">Login</button>
+                    </div>
+                </section>
+
+                <!-- Booking Simulation -->
+                <section class="glass-card p-8">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="p-3 bg-orange-100 text-orange-600 rounded-2xl">📅</div>
+                        <h2 class="text-xl font-bold">1. Book a Slot</h2>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <input id="slot_date" type="date" class="p-3 border rounded-xl">
+                        <select id="slot_niche" class="p-3 border rounded-xl">
+                            <option value="Electrician">Electrician ($75)</option>
+                            <option value="Plumber">Plumber ($65)</option>
+                        </select>
+                        <button onclick="apiCall('get_available_slots')" class="bg-slate-800 text-white rounded-xl font-bold">Fetch Slots</button>
+                    </div>
+                    <div id="bookingContext" class="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-300 text-sm hidden">
+                        <!-- Filled after booking -->
+                    </div>
+                </section>
+
+                <section class="glass-card p-8 border-t-4 border-indigo-500">
+                    <div class="flex items-center justify-between mb-8">
+                        <div class="flex items-center gap-4">
+                            <div class="p-3 bg-indigo-100 text-indigo-600 rounded-2xl">💳</div>
+                            <h2 class="text-xl font-bold">2. Google Pay Checkout</h2>
+                        </div>
+                        <span class="px-3 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded-full border border-indigo-100">TEST MODE</span>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="flex flex-col md:flex-row gap-6 items-center bg-slate-50 p-6 rounded-2xl">
+                            <div class="flex-1">
+                                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Payment Target</div>
+                                <div id="pay_target_id" class="text-lg font-mono font-bold text-slate-700">No Active Booking</div>
+                                <div id="pay_target_amt" class="text-2xl font-black text-indigo-600 mt-1">$0.00</div>
+                            </div>
+                            <!-- Google Pay Button Container -->
+                            <div id="gpay_button_container" class="gpay-btn-container"></div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <button onclick="simulateGPay()" class="py-4 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-500 hover:border-indigo-500 transition-all">
+                                Simulate Sample JSON Pay
+                            </button>
+                            <button onclick="clearBooking()" class="py-4 bg-white border border-slate-200 rounded-xl text-xs font-bold text-rose-500 hover:border-rose-500">
+                                Reset Checkout
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="lg:col-span-1">
+                <div class="terminal-bg h-[700px] flex flex-col sticky top-10 shadow-2xl">
+                    <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+                        <span class="text-xs font-bold uppercase tracking-widest text-slate-500">System Logs</span>
+                        <button onclick="document.getElementById('output').innerHTML=''" class="text-[10px] text-slate-600 hover:text-white">Clear</button>
+                    </div>
+                    <div id="output" class="p-6 overflow-y-auto flex-1 font-mono text-[12px] leading-relaxed">
+                        <div class="opacity-30 italic">// Initializing payment handlers...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let authToken = localStorage.getItem('antin_token');
+        let currentBookingId = null;
+        let currentAmount = 0;
+
+        document.getElementById('slot_date').valueAsDate = new Date();
+
+        function log(msg, type = 'info') {
+            const out = document.getElementById('output');
+            const div = document.createElement('div');
+            const colors = { error: 'text-rose-400', success: 'text-emerald-400', warn: 'text-amber-400' };
+            div.className = "mb-3 pb-3 border-b border-slate-800/50";
+            div.innerHTML = `<span class="text-[10px] text-slate-500 block">[${new Date().toLocaleTimeString()}]</span>
+                             <span class="${colors[type] || 'text-sky-400'}">${typeof msg === 'object' ? JSON.stringify(msg, null, 2) : msg}</span>`;
+            out.prepend(div);
+        }
+
+        // --- Google Pay Logic ---
+        const baseRequest = { apiVersion: 2, apiVersionMinor: 0 };
+        const tokenizationSpecification = {
+            type: 'PAYMENT_GATEWAY',
+            parameters: { 'gateway': 'example', 'gatewayMerchantId': 'exampleGatewayMerchantId' }
+        };
+        const allowedPaymentMethods = [{
+            type: 'CARD',
+            parameters: { allowedAuthMethods: ["PAN_ONLY", "CRYPTOGRAM_3DS"], allowedCardNetworks: ["VISA", "MASTERCARD"] },
+            tokenizationSpecification: tokenizationSpecification
+        }];
+
+        const paymentsClient = new google.payments.api.PaymentsClient({ environment: 'TEST' });
+
+        window.onload = function() {
+            const button = paymentsClient.createButton({
+                onClick: () => onGooglePayClicked(),
+                buttonColor: 'black',
+                buttonType: 'buy',
+                buttonSizeMode: 'fill'
+            });
+            document.getElementById('gpay_button_container').appendChild(button);
+        };
+
+        function onGooglePayClicked() {
+            if(!currentBookingId) { log("Please book a service slot first!", "warn"); return; }
+            
+            const paymentDataRequest = Object.assign({}, baseRequest);
+            paymentDataRequest.allowedPaymentMethods = allowedPaymentMethods;
+            paymentDataRequest.transactionInfo = {
+                totalPriceStatus: 'FINAL',
+                totalPrice: currentAmount.toString(),
+                currencyCode: 'USD',
+                countryCode: 'US'
+            };
+            paymentDataRequest.merchantInfo = { merchantName: 'Antinna Business' };
+
+            paymentsClient.loadPaymentData(paymentDataRequest)
+                .then(paymentData => processPaymentResponse(paymentData))
+                .catch(err => log("GPay Error: " + err.statusCode, "error"));
+        }
+
+        async function processPaymentResponse(paymentData) {
+            log("GPay Response Received. Uploading to Antinna Backend...");
+            
+            const payload = {
+                action: 'record_payment',
+                token: authToken,
+                bookingId: currentBookingId,
+                amount: currentAmount,
+                method: 'Google Pay',
+                details: paymentData, // Structured data
+                payer: {
+                    email: paymentData.email || document.getElementById('auth_user').value,
+                    name: "User Name"
+                }
+            };
+
+            await apiCall('record_payment', payload);
+        }
+
+        function simulateGPay() {
+            if(!currentBookingId) { log("Assigning dummy Booking ID for simulation...", "warn"); currentBookingId = "BK-MOCK-123"; }
+            
+            // This is exactly the JSON structure you provided
+            const sampleResponse = {
+                method: "https://google.com/pay",
+                payer: { name: "Card Holder Name", email: "manishgautammg7@yahoo.com", phone: "+1 650-555-5555" },
+                details: {
+                    apiVersion: 2, apiVersionMinor: 0,
+                    email: "manishgautammg7@yahoo.com",
+                    paymentMethodData: {
+                        description: "Test Card: Visa •••• 1111",
+                        info: {
+                            cardDetails: "1111", cardFundingSource: "CREDIT", cardNetwork: "VISA"
+                        },
+                        tokenizationData: { token: "exampleToken_123456", type: "PAYMENT_GATEWAY" }
+                    }
+                }
+            };
+            
+            log("Simulating specific User JSON provided...");
+            processPaymentResponse(sampleResponse);
+        }
+
+        async function apiCall(action, customPayload = null) {
+            const url = document.getElementById('scriptUrl').value;
+            let payload = customPayload || { action: action, token: authToken };
+
+            if(action === 'login' || action === 'signup') {
+                payload.username = document.getElementById('auth_user').value;
+                payload.password = document.getElementById('auth_pass').value;
+            }
+
+            if(action === 'get_available_slots') {
+                payload.niche = document.getElementById('slot_niche').value;
+                payload.date = document.getElementById('slot_date').value;
+            }
+
+            log(`→ Calling: ${action}...`);
+            try {
+                const res = await fetch(url, { method: 'POST', body: JSON.stringify(payload) });
+                const data = await res.json();
+                
+                if(data.success) {
+                    log(data, "success");
+                    if(action === 'login') authToken = data.token;
+                    
+                    // Logic to capture Booking ID from slot fetching/booking
+                    if(action === 'get_available_slots' && data.data.length > 0) {
+                        log("Slots found. Auto-booking first slot for demo...");
+                        const firstSlot = data.data[0];
+                        await apiCall('book_service', {
+                            action: 'book_service',
+                            token: authToken,
+                            providerEmail: firstSlot.providerEmail,
+                            slot: firstSlot.slot,
+                            date: payload.date,
+                            niche: payload.niche,
+                            zipcode: "12345" // Mock zip
+                        });
+                    }
+
+                    if(action === 'book_service') {
+                        currentBookingId = data.bookingId;
+                        currentAmount = (payload.niche === 'Electrician') ? 75.00 : 65.00;
+                        updateCheckoutUI();
+                    }
+                } else {
+                    log(data.message, "error");
+                }
+            } catch (e) { log("Network Error: " + e.message, "error"); }
+        }
+
+        function updateCheckoutUI() {
+            document.getElementById('pay_target_id').innerText = currentBookingId;
+            document.getElementById('pay_target_amt').innerText = `$${currentAmount.toFixed(2)}`;
+            document.getElementById('pay_target_amt').classList.add('animate-pulse');
+        }
+
+        function clearBooking() {
+            currentBookingId = null;
+            currentAmount = 0;
+            document.getElementById('pay_target_id').innerText = "No Active Booking";
+            document.getElementById('pay_target_amt').innerText = "$0.00";
+            document.getElementById('pay_target_amt').classList.remove('animate-pulse');
+            log("Checkout Reset.");
+        }
+    </script>
+</body>
+</html>
