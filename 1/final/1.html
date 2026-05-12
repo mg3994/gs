@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antinna Backend Tester</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 1); }
+        .terminal-bg { background: #0f172a; color: #38bdf8; }
+        .log-entry { border-left: 2px solid #334155; padding-left: 12px; margin-bottom: 12px; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Antinna API Dashboard</h1>
+                <p class="text-slate-500">Connected to your Google Apps Script Deployment</p>
+            </div>
+            <div class="flex items-center gap-3 bg-white p-2 px-4 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Target URL</span>
+                    <input id="scriptUrl" type="text" class="text-xs text-blue-600 font-mono bg-transparent outline-none w-80" 
+                    value="https://script.google.com/macros/s/AKfycbxOlKZe42UZyt20fBee1QCp1nw1IDPnH8h34t1CQIuyihXJIUVz065d30Lyd3l0w8xUwg/exec">
+                </div>
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- Authentication Block -->
+                <section class="glass-card p-6 rounded-3xl shadow-xl">
+                    <h2 class="text-lg font-bold mb-4 flex items-center gap-3 text-slate-800">
+                        <span class="p-2 bg-indigo-100 text-indigo-600 rounded-xl">🔑</span> User Access
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-1.5">
+                            <label class="text-[11px] font-bold text-slate-500 uppercase ml-1">Email Address</label>
+                            <input id="auth_user" type="text" class="w-full p-3.5 rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-4 focus:ring-indigo-50 outline-none transition-all" placeholder="user@example.com">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-[11px] font-bold text-slate-500 uppercase ml-1">Password</label>
+                            <input id="auth_pass" type="password" class="w-full p-3.5 rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-4 focus:ring-indigo-50 outline-none transition-all" placeholder="••••••••">
+                        </div>
+                    </div>
+                    <div class="flex gap-3 mt-6">
+                        <button onclick="apiCall('signup')" class="flex-1 py-4 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-2xl hover:bg-slate-50 active:scale-95 transition-all">Create Account</button>
+                        <button onclick="apiCall('login')" class="flex-1 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 active:scale-95 transition-all">Secure Log In</button>
+                    </div>
+                    <div id="tokenBadge" class="hidden mt-4 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="p-1 bg-emerald-500 rounded-full"></span>
+                            <span class="text-sm text-emerald-700 font-semibold" id="activeTokenText">Session Active</span>
+                        </div>
+                        <button onclick="logout()" class="text-xs font-bold text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-all">Terminate</button>
+                    </div>
+                </section>
+
+                <!-- Public Tests -->
+                <section class="glass-card p-6 rounded-3xl shadow-sm">
+                    <h2 class="text-lg font-bold mb-4 flex items-center gap-3 text-slate-800">
+                        <span class="p-2 bg-orange-100 text-orange-600 rounded-xl">📍</span> Public Queries
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="text-[11px] font-bold text-slate-400 uppercase">Service Availability</label>
+                            <div class="flex flex-col gap-2">
+                                <div class="flex gap-2">
+                                    <input id="slot_date" type="date" class="flex-1 p-3 rounded-xl border border-slate-200 text-sm">
+                                    <select id="slot_niche" class="p-3 rounded-xl border border-slate-200 text-sm">
+                                        <option value="Electrician">Electrician</option>
+                                        <option value="Plumber">Plumber</option>
+                                        <option value="Cleaning">Cleaning</option>
+                                    </select>
+                                </div>
+                                <button onclick="apiCall('get_available_slots')" class="w-full py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-all">Fetch Slots</button>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[11px] font-bold text-slate-400 uppercase">Geo-Fencing</label>
+                            <div class="flex gap-2">
+                                <input id="zip_input" type="text" class="flex-1 p-3 rounded-xl border border-slate-200 text-sm" placeholder="Enter Zipcode">
+                                <button onclick="apiCall('check_location')" class="px-6 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900 transition-all">Verify</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Admin Tools -->
+                <section class="p-6 rounded-3xl border-2 border-dashed border-slate-300 bg-white/50">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold flex items-center gap-3 text-slate-800">
+                            <span class="p-2 bg-rose-100 text-rose-600 rounded-xl">🛡️</span> Admin Console
+                        </h2>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button onclick="apiCall('admin_add_provider_mock')" class="p-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold hover:border-indigo-400 text-left transition-all group flex items-center justify-between">
+                            <div>
+                                <div class="text-slate-800 mb-1">Add Mock Provider</div>
+                                <div class="text-[11px] text-slate-400 font-normal italic">John Doe (Electrician)</div>
+                            </div>
+                            <span class="text-slate-300 group-hover:text-indigo-500 transition-colors">→</span>
+                        </button>
+                        <button onclick="apiCall('admin_set_slots_mock')" class="p-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold hover:border-emerald-400 text-left transition-all group flex items-center justify-between">
+                            <div>
+                                <div class="text-slate-800 mb-1">Populate Slots</div>
+                                <div class="text-[11px] text-slate-400 font-normal italic">Adds 5 slots for selected date</div>
+                            </div>
+                            <span class="text-slate-300 group-hover:text-emerald-500 transition-colors">→</span>
+                        </button>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Result Console -->
+            <div class="lg:col-span-1 h-fit sticky top-8">
+                <div class="terminal-bg rounded-[2rem] overflow-hidden shadow-2xl border border-slate-800">
+                    <div class="bg-slate-800/50 px-5 py-4 flex items-center justify-between border-b border-slate-700/50">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                        </div>
+                        <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Network Log</span>
+                    </div>
+                    <div id="output" class="p-6 h-[600px] overflow-y-auto text-[13px] font-mono whitespace-pre-wrap leading-relaxed">
+                        <div class="text-slate-500 italic opacity-50">// Ready for instructions...</div>
+                    </div>
+                </div>
+                <button onclick="clearConsole()" class="mt-4 w-full py-3 text-[11px] font-black text-slate-400 hover:text-slate-600 transition-all uppercase tracking-widest bg-white rounded-xl border border-slate-200">Clear Terminal Data</button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        let authToken = localStorage.getItem('antin_token') || null;
+
+        // Initialize UI
+        if(authToken) updateTokenUI();
+        document.getElementById('slot_date').valueAsDate = new Date();
+
+        function updateTokenUI() {
+            const badge = document.getElementById('tokenBadge');
+            const txt = document.getElementById('activeTokenText');
+            if(authToken) {
+                badge.classList.remove('hidden');
+                txt.innerText = "Token: " + authToken.substring(0, 12) + "...";
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function logout() {
+            authToken = null;
+            localStorage.removeItem('antin_token');
+            updateTokenUI();
+            log("Session cleared from local storage.", "info");
+        }
+
+        function log(msg, type = 'info') {
+            const out = document.getElementById('output');
+            const div = document.createElement('div');
+            div.className = "log-entry";
+            
+            const timestamp = new Date().toLocaleTimeString();
+            let color = "text-sky-400";
+            if(type === 'error') color = "text-rose-400";
+            if(type === 'success') color = "text-emerald-400";
+            if(type === 'warn') color = "text-amber-400";
+
+            const content = typeof msg === 'object' ? JSON.stringify(msg, null, 2) : msg;
+            
+            div.innerHTML = `
+                <span class="text-[10px] text-slate-500 block mb-1 font-sans font-bold">[${timestamp}]</span>
+                <span class="${color}">${content}</span>
+            `;
+            out.prepend(div);
+        }
+
+        function clearConsole() {
+            document.getElementById('output').innerHTML = '<div class="text-slate-500 italic opacity-50">// Logs cleared...</div>';
+        }
+
+        async function apiCall(action) {
+            const endpoint = document.getElementById('scriptUrl').value.trim();
+            const user = document.getElementById('auth_user').value.trim();
+            const pass = document.getElementById('auth_pass').value.trim();
+            const zip = document.getElementById('zip_input').value.trim();
+            const niche = document.getElementById('slot_niche').value;
+            const date = document.getElementById('slot_date').value;
+
+            if(!endpoint) {
+                log("Missing deployment URL!", "error");
+                return;
+            }
+
+            let payload = { action: action };
+
+            // Logic to populate payload based on action
+            switch(action) {
+                case 'signup':
+                case 'login':
+                    if(!user || !pass) { log("Enter email and password.", "warn"); return; }
+                    payload.username = user;
+                    payload.password = pass;
+                    break;
+                case 'check_location':
+                    if(!zip) { log("Enter a zip code.", "warn"); return; }
+                    payload.zipcode = zip;
+                    break;
+                case 'get_available_slots':
+                    if(!date) { log("Select a date.", "warn"); return; }
+                    payload.niche = niche;
+                    payload.date = date;
+                    break;
+                case 'admin_add_provider_mock':
+                    payload.action = 'admin_add_provider';
+                    payload.name = 'John Doe';
+                    payload.email = 'john@electric.com';
+                    payload.niche = 'Electrician';
+                    break;
+                case 'admin_set_slots_mock':
+                    payload.action = 'admin_set_slots';
+                    payload.providerEmail = 'john@electric.com';
+                    payload.date = date;
+                    payload.slots = ['09:00 AM', '11:00 AM', '01:00 PM', '03:00 PM', '05:00 PM'];
+                    break;
+            }
+
+            // Add token if exists
+            if (authToken) payload.token = authToken;
+
+            log(`→ POST ${payload.action}...`);
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP Error: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    log(result, 'success');
+                    if (action === 'login' && result.token) {
+                        authToken = result.token;
+                        localStorage.setItem('antin_token', authToken);
+                        updateTokenUI();
+                    }
+                } else {
+                    log(result, 'error');
+                }
+            } catch (err) {
+                log(`Network Failure: ${err.message}`, 'error');
+                log("TROUBLESHOOTING:\n1. Check if Deployment URL is correct.\n2. Ensure Script is deployed as 'Web App'.\n3. Ensure Access is set to 'Anyone'.", "warn");
+            }
+        }
+    </script>
+</body>
+</html>
