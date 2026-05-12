@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antinna Backend Tester</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); }
+        .terminal-bg { background: #1e293b; color: #38bdf8; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-900">Antinna Backend Tester</h1>
+                <p class="text-slate-500">Interactive debugger for your Google Apps Script deployment</p>
+            </div>
+            <div class="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+                <span class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+                <input id="scriptUrl" type="text" class="text-sm text-slate-600 bg-transparent outline-none w-64" value="https://script.google.com/macros/s/AKfycbz9Hgyr3W7BH5tVu80egfuncrgGDGykX0g0lODbeM4dzp08TjFSIJpR-3mPl6Somo91Lw/exec" readonly>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- Authentication Block -->
+                <section class="glass-card p-6 rounded-2xl shadow-sm">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <span class="p-2 bg-blue-100 text-blue-600 rounded-lg">🔑</span> Authentication
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Username/Email</label>
+                            <input id="auth_user" type="text" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="admin@antinna.in">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Password</label>
+                            <input id="auth_pass" type="password" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="••••••••">
+                        </div>
+                    </div>
+                    <div class="flex gap-2 mt-4">
+                        <button onclick="apiCall('signup')" class="flex-1 py-3 bg-slate-800 text-white font-semibold rounded-xl hover:bg-slate-700 transition-all">Sign Up</button>
+                        <button onclick="apiCall('login')" class="flex-1 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-500 transition-all shadow-lg shadow-blue-200">Log In</button>
+                    </div>
+                    <div id="tokenBadge" class="hidden mt-4 p-3 bg-green-50 border border-green-100 rounded-xl flex items-center justify-between">
+                        <span class="text-xs text-green-700 font-medium truncate max-w-[200px]" id="activeTokenText">Token Active</span>
+                        <button onclick="logout()" class="text-xs font-bold text-red-500 hover:underline">Logout</button>
+                    </div>
+                </section>
+
+                <!-- Public Tests -->
+                <section class="glass-card p-6 rounded-2xl shadow-sm">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <span class="p-2 bg-purple-100 text-purple-600 rounded-lg">🌍</span> Public Actions
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold text-slate-400">CHECK LOCATION</label>
+                            <div class="flex gap-2">
+                                <input id="zip_input" type="text" class="flex-1 p-3 rounded-xl border border-slate-200" placeholder="Zip (e.g. 110001)">
+                                <button onclick="apiCall('check_location')" class="px-4 bg-slate-100 rounded-xl hover:bg-slate-200 transition-all">Check</button>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold text-slate-400">GET SLOTS</label>
+                            <div class="flex gap-2">
+                                <input id="slot_date" type="date" class="flex-1 p-3 rounded-xl border border-slate-200">
+                                <select id="slot_niche" class="p-3 rounded-xl border border-slate-200">
+                                    <option value="Electrician">Electrician</option>
+                                    <option value="Plumber">Plumber</option>
+                                    <option value="Cleaning">Cleaning</option>
+                                </select>
+                                <button onclick="apiCall('get_available_slots')" class="px-4 bg-slate-100 rounded-xl hover:bg-slate-200 transition-all">Fetch</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Admin Tools -->
+                <section class="glass-card p-6 rounded-2xl shadow-sm bg-slate-50 border-dashed border-2">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold flex items-center gap-2">
+                            <span class="p-2 bg-red-100 text-red-600 rounded-lg">🛡️</span> Admin Console
+                        </h2>
+                        <span class="text-[10px] bg-red-100 text-red-700 px-2 py-1 rounded font-bold uppercase">Requires Admin Privileges</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button onclick="apiCall('admin_add_provider_mock')" class="p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold hover:border-blue-400 text-left transition-all group">
+                            <div class="text-slate-400 group-hover:text-blue-500 mb-1">Add Mock Provider</div>
+                            <div class="text-xs text-slate-500 font-normal">Adds 'John Doe' as Electrician</div>
+                        </button>
+                        <button onclick="apiCall('admin_set_slots_mock')" class="p-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold hover:border-green-400 text-left transition-all group">
+                            <div class="text-slate-400 group-hover:text-green-500 mb-1">Generate Slots</div>
+                            <div class="text-xs text-slate-500 font-normal">Adds 10am-5pm slots for today</div>
+                        </button>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Result Console -->
+            <div class="lg:col-span-1 h-fit sticky top-8">
+                <div class="terminal-bg rounded-2xl overflow-hidden shadow-2xl">
+                    <div class="bg-slate-800 px-4 py-2 flex items-center justify-between">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">System Response</span>
+                        <div class="flex gap-1.5">
+                            <div class="w-2.5 h-2.5 rounded-full bg-red-500/50"></div>
+                            <div class="w-2.5 h-2.5 rounded-full bg-yellow-500/50"></div>
+                            <div class="w-2.5 h-2.5 rounded-full bg-green-500/50"></div>
+                        </div>
+                    </div>
+                    <div id="output" class="p-4 h-[500px] overflow-y-auto text-sm font-mono whitespace-pre-wrap">
+                        <span class="text-slate-500 italic">// Waiting for action...</span>
+                    </div>
+                </div>
+                <button onclick="clearConsole()" class="mt-4 w-full py-2 text-xs font-bold text-slate-400 hover:text-slate-600 transition-all uppercase tracking-widest">Clear Logs</button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const scriptUrl = document.getElementById('scriptUrl').value;
+        let authToken = localStorage.getItem('antin_token') || null;
+
+        if(authToken) updateTokenUI();
+
+        function updateTokenUI() {
+            const badge = document.getElementById('tokenBadge');
+            const txt = document.getElementById('activeTokenText');
+            if(authToken) {
+                badge.classList.remove('hidden');
+                txt.innerText = "Session: " + authToken.substring(0, 8) + "...";
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function logout() {
+            authToken = null;
+            localStorage.removeItem('antin_token');
+            updateTokenUI();
+            log("User logged out locally.");
+        }
+
+        function log(msg, type = 'info') {
+            const out = document.getElementById('output');
+            const div = document.createElement('div');
+            div.className = "mb-2 border-b border-slate-700/50 pb-2";
+            
+            const timestamp = new Date().toLocaleTimeString();
+            let color = "text-sky-400";
+            if(type === 'error') color = "text-red-400";
+            if(type === 'success') color = "text-green-400";
+
+            div.innerHTML = `<span class="text-[10px] text-slate-500 block mb-1">[${timestamp}]</span><span class="${color}">${typeof msg === 'object' ? JSON.stringify(msg, null, 2) : msg}</span>`;
+            out.prepend(div);
+        }
+
+        function clearConsole() {
+            document.getElementById('output').innerHTML = '<span class="text-slate-500 italic">// Logs cleared...</span>';
+        }
+
+        async function apiCall(action) {
+            const user = document.getElementById('auth_user').value;
+            const pass = document.getElementById('auth_pass').value;
+            const zip = document.getElementById('zip_input').value;
+            const niche = document.getElementById('slot_niche').value;
+            const date = document.getElementById('slot_date').value || new Date().toISOString().split('T')[0];
+
+            let payload = { action: action };
+
+            // Logic to populate payload based on action
+            switch(action) {
+                case 'signup':
+                case 'login':
+                    payload.username = user;
+                    payload.password = pass;
+                    break;
+                case 'check_location':
+                    payload.zipcode = zip;
+                    break;
+                case 'get_available_slots':
+                    payload.niche = niche;
+                    payload.date = date;
+                    break;
+                case 'admin_add_provider_mock':
+                    payload.action = 'admin_add_provider';
+                    payload.name = 'John Doe';
+                    payload.email = 'john@electric.com';
+                    payload.niche = 'Electrician';
+                    break;
+                case 'admin_set_slots_mock':
+                    payload.action = 'admin_set_slots';
+                    payload.providerEmail = 'john@electric.com';
+                    payload.date = date;
+                    payload.slots = ['10:00 AM', '11:00 AM', '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'];
+                    break;
+            }
+
+            // Add token if exists
+            if (authToken) payload.token = authToken;
+
+            log(`Calling: ${payload.action}...`);
+
+            try {
+                const response = await fetch(scriptUrl, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    log(result, 'success');
+                    if (action === 'login' && result.token) {
+                        authToken = result.token;
+                        localStorage.setItem('antin_token', authToken);
+                        updateTokenUI();
+                    }
+                } else {
+                    log(result, 'error');
+                }
+            } catch (err) {
+                log(`Network error: ${err.message}`, 'error');
+                log("HINT: Ensure your Apps Script is deployed as 'Web App' with access to 'Anyone'.", "info");
+            }
+        }
+    </script>
+</body>
+</html>
