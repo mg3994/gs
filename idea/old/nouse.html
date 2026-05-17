@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Precision Geolocation Engine + ✨ Gemini AI</title>
+    <style>
+        :root {
+            --primary: #1a73e8;
+            --surface: #ffffff;
+            --background: #f1f3f4;
+            --text-main: #202124;
+            --text-sub: #5f6368;
+            --shadow: 0 4px 12px rgba(0,0,0,0.15);
+            --radius: 16px;
+            --gemini-gradient: linear-gradient(135deg, #4285f4, #9b72f3, #d96570);
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: var(--background);
+        }
+
+        #mapCanvas {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1;
+        }
+
+        /* Floating Search Interface */
+        .search-wrapper {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: calc(100% - 40px);
+            max-width: 450px;
+            z-index: 10;
+        }
+
+        .search-box {
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .search-box input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 16px;
+            color: var(--text-main);
+        }
+
+        .predictions {
+            margin-top: 8px;
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            max-height: 250px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .prediction-item {
+            padding: 14px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f3f4;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .prediction-item:hover { background: #f8f9fa; }
+
+        /* Info Card */
+        .info-card {
+            position: absolute;
+            bottom: 30px;
+            left: 20px;
+            width: calc(100% - 40px);
+            max-width: 420px;
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            z-index: 10;
+            padding: 24px;
+            box-sizing: border-box;
+            transform: translateY(120%);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+        }
+
+        .info-card.visible { transform: translateY(0); }
+
+        .address-text { font-weight: 600; font-size: 18px; color: var(--text-main); margin-bottom: 4px; }
+        .coords-badge { font-family: monospace; font-size: 12px; color: var(--primary); background: #e8f0fe; padding: 4px 8px; border-radius: 4px; }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 20px 0;
+            padding: 15px 0;
+            border-top: 1px solid #eee;
+            border-bottom: 1px solid #eee;
+        }
+
+        .metric-label { font-size: 11px; color: var(--text-sub); text-transform: uppercase; }
+        .metric-value { font-size: 18px; font-weight: 700; color: var(--text-main); }
+
+        /* Gemini AI Features */
+        .ai-section {
+            margin-top: 15px;
+            background: #fdf2f8;
+            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid #fbcfe8;
+        }
+
+        .ai-btn {
+            background: var(--gemini-gradient);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            justify-content: center;
+            margin-top: 10px;
+            transition: opacity 0.2s;
+        }
+
+        .ai-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .ai-response {
+            font-size: 13px;
+            line-height: 1.5;
+            color: #4b5563;
+            margin-top: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            display: none;
+            max-height: 150px;
+            overflow-y: auto;
+            border-left: 3px solid #9b72f3;
+        }
+
+        .loading-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .confirm-btn {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: 600;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 500px) {
+            .info-card { bottom: 10px; left: 10px; width: calc(100% - 20px); padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="search-wrapper">
+        <div class="search-box">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="searchInput" placeholder="Search a destination..." oninput="onTyping(this.value)" autocomplete="off">
+        </div>
+        <div id="predictions" class="predictions"></div>
+    </div>
+
+    <div id="infoCard" class="info-card">
+        <div class="address-text" id="displayAddr">Select a location...</div>
+        <div class="coords-badge" id="displayCoords">0.0, 0.0</div>
+
+        <div class="metrics-grid">
+            <div class="metric">
+                <span class="metric-label">Distance</span>
+                <span class="metric-value" id="distVal">--</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Estimated Time</span>
+                <span class="metric-value" id="durVal">--</span>
+            </div>
+        </div>
+
+        <!-- Gemini API Integrations -->
+        <div class="ai-section">
+            <div style="font-size: 11px; font-weight: 700; color: #db2777; text-transform: uppercase;">AI Location Intelligence</div>
+            <button class="ai-btn" id="analyzeBtn" onclick="analyzeLocation()">
+                <span class="loading-spinner" id="spinner"></span>
+                ✨ Get Location Insights ✨
+            </button>
+            <div id="aiResponse" class="ai-response"></div>
+        </div>
+
+        <button class="confirm-btn" onclick="confirmLocation()">Confirm Selection</button>
+    </div>
+
+    <div id="mapCanvas"></div>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=&libraries=places&callback=initMap" async defer></script>
+
+    <script>
+        const apiKey = ""; // Environment provided
+        let map, marker, searchDebounce;
+        let userPos = { lat: 28.6139, lng: 77.2090 };
+        let currentTarget = null;
+
+        function initMap() {
+            const mapOptions = {
+                zoom: 14,
+                center: userPos,
+                mapTypeId: google.maps.MapTypeId.ROADMAP,
+                styles: [{ "featureType": "poi", "stylers": [{ "visibility": "off" }] }],
+                disableDefaultUI: true
+            };
+            map = new google.maps.Map(document.getElementById("mapCanvas"), mapOptions);
+            marker = new google.maps.Marker({
+                position: map.getCenter(),
+                map: map,
+                draggable: true,
+                animation: google.maps.Animation.DROP
+            });
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                    map.setCenter(userPos);
+                    marker.setPosition(userPos);
+                    updateUI(userPos.lat, userPos.lng);
+                });
+            }
+
+            google.maps.event.addListener(map, 'click', e => updateUI(e.latLng.lat(), e.latLng.lng()));
+            google.maps.event.addListener(marker, 'dragend', e => updateUI(e.latLng.lat(), e.latLng.lng()));
+        }
+
+        function updateUI(lat, lng) {
+            currentTarget = { lat, lng };
+            marker.setPosition({lat, lng});
+            document.getElementById('displayCoords').innerText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            document.getElementById('infoCard').classList.add('visible');
+            document.getElementById('aiResponse').style.display = 'none';
+            
+            // Mocking Distance API for local display
+            document.getElementById('distVal').innerText = "Calculating...";
+            document.getElementById('displayAddr').innerText = "Searching Address...";
+            
+            setTimeout(() => {
+                document.getElementById('distVal').innerText = "8.4 km";
+                document.getElementById('durVal').innerText = "18 min";
+                document.getElementById('displayAddr').innerText = `Location at ${lat.toFixed(3)}, ${lng.toFixed(3)}`;
+            }, 500);
+        }
+
+        /**
+         * Gemini API Integration: Location Analysis
+         */
+        async function analyzeLocation() {
+            if (!currentTarget) return;
+
+            const btn = document.getElementById('analyzeBtn');
+            const spinner = document.getElementById('spinner');
+            const responseDiv = document.getElementById('aiResponse');
+
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+            responseDiv.style.display = 'block';
+            responseDiv.innerText = "✨ Gemini is analyzing neighborhood data...";
+
+            const prompt = `Analyze this geographical location: Latitude ${currentTarget.lat}, Longitude ${currentTarget.lng}. 
+            The user is 8.4 km away with an 18-minute drive.
+            1. Describe the potential neighborhood type (e.g., urban, suburban, rural).
+            2. Suggest 2-3 local amenities likely found at these coordinates.
+            3. Give a travel tip based on the 18-minute duration.
+            Keep it concise and professional.`;
+
+            try {
+                const response = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        systemInstruction: { parts: [{ text: "You are a local geography and logistics expert. Provide helpful, grounded insights." }] }
+                    })
+                });
+
+                const data = await response.json();
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Couldn't retrieve AI insights at this time.";
+                responseDiv.innerText = text;
+            } catch (err) {
+                responseDiv.innerText = "⚠️ AI Error: " + err.message;
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+            }
+        }
+
+        async function fetchWithRetry(url, options, retries = 5) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const res = await fetch(url, options);
+                    if (res.ok) return res;
+                } catch (e) {}
+                await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
+            }
+            throw new Error("Failed after 5 retries");
+        }
+
+        function onTyping(val) {
+            clearTimeout(searchDebounce);
+            const box = document.getElementById('predictions');
+            if (val.length < 3) { box.style.display = 'none'; return; }
+            searchDebounce = setTimeout(() => {
+                const results = [`${val} Plaza`, `${val} Main Street`, `${val} Business Park`];
+                box.innerHTML = "";
+                results.forEach(res => {
+                    const div = document.createElement('div');
+                    div.className = 'prediction-item';
+                    div.innerText = res;
+                    div.onclick = () => {
+                        document.getElementById('searchInput').value = res;
+                        box.style.display = 'none';
+                        const nLat = userPos.lat + 0.01;
+                        const nLng = userPos.lng + 0.01;
+                        map.panTo({lat: nLat, lng: nLng});
+                        updateUI(nLat, nLng);
+                    };
+                    box.appendChild(div);
+                });
+                box.style.display = 'block';
+            }, 300);
+        }
+
+        function confirmLocation() {
+            alert("Location Confirmed: " + currentTarget.lat + ", " + currentTarget.lng);
+        }
+    </script>
+</body>
+</html>
